@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Scanner NISN - Komite Sekolah</title>
-  <!-- Tailwind CSS CDN untuk Tampilan Modern -->
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Font Awesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -48,36 +48,31 @@
 
   <!-- Footer Info -->
   <footer class="w-full max-w-md text-center py-3 border-t border-slate-800 text-xs text-slate-500">
-    Arahkan kamera ke QR Code Kartu Pelajar Siswa[cite: 3, 4]
+    Arahkan kamera ke QR Code Kartu Pelajar Siswa
   </footer>
 
   <!-- Javascript Logic -->
   <script>
     let lastScannedNisn = "";
-    let html5QrcodeScanner = null;
 
-    function onScanSuccess(decodedText, decodedResult) {
-      // Cegah proses berulang jika QR yang sama ter-scan berturut-turut
+    function onScanSuccess(decodedText) {
       if (lastScannedNisn === decodedText) return;
-      
       lastScannedNisn = decodedText;
 
-      // Tampilkan hasil di UI
       document.getElementById('txtNisnResult').innerText = decodedText;
       document.getElementById('resultBox').classList.remove('hidden');
 
-      // Otomatis Salin ke Clipboard jika Browser Mengizinkan
       if (navigator.clipboard) {
         navigator.clipboard.writeText(decodedText).then(() => {
           showCopyStatus();
         }).catch(err => {
-          console.log("Auto-copy gagal, gunakan tombol manual.", err);
+          console.log("Auto-copy tidak diizinkan, gunakan tombol manual.", err);
         });
       }
     }
 
     function onScanFailure(error) {
-      // Abaikan error pemindaian per-frame biasa
+      // Abaikan error frame pembacaan biasa
     }
 
     function copyToClipboard() {
@@ -99,4 +94,18 @@
       }, 3000);
     }
 
-    // Inisialisasi Scanner
+    window.addEventListener('DOMContentLoaded', () => {
+      const html5QrcodeScanner = new Html5QrcodeScanner(
+        "reader", 
+        { 
+          fps: 10, 
+          qrbox: { width: 220, height: 220 },
+          aspectRatio: 1.0
+        }, 
+        false
+      );
+      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+    });
+  </script>
+</body>
+</html>
