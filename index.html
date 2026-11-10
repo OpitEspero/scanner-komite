@@ -120,27 +120,16 @@
     try {
       scanner = new Html5Qrcode("reader");
 
-      const cameras = await Html5Qrcode.getCameras();
-
-      if (!cameras || cameras.length === 0) {
-        throw new Error("Tidak ditemukan kamera pada perangkat.");
-      }
-
-      const backCamera =
-        cameras.find(camera =>
-          /back|rear|environment|belakang/i.test(camera.label)
-        ) || cameras[cameras.length - 1];
-
       await scanner.start(
-        backCamera.id,
-        {
-          fps: 10,
-          qrbox: { width: 220, height: 220 },
-          aspectRatio: 1.0
-        },
-        onScanSuccess,
-        () => {}
-      );
+  { facingMode: "environment" },
+  {
+    fps: 10,
+    qrbox: { width: 220, height: 220 },
+    aspectRatio: 1.0
+  },
+  onScanSuccess,
+  () => {}
+);
 
       isRunning = true;
       btnStart.classList.add("hidden");
