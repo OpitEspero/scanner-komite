@@ -1,111 +1,243 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QR Scanner NISN - Komite Sekolah</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Font Awesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <!-- HTML5-QRCode Scanner Library -->
-  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-</head>
-<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 antialiased">
 
-  <!-- Header -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/html5-qrcode"></script>
+
+  <style>
+    #reader {
+      width: 100%;
+      border: none !important;
+    }
+    #reader video {
+      border-radius: 12px;
+    }
+    #reader__dashboard_section_csr button,
+    #reader__dashboard_section_swaplink {
+      margin: 6px;
+    }
+    #reader__status_span {
+      color: white !important;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4">
+
   <header class="w-full max-w-md text-center py-4 border-b border-slate-800">
-    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mb-2 text-white shadow-lg shadow-blue-500/30">
+    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mb-2 text-white">
       <i class="fa-solid fa-qrcode text-2xl"></i>
     </div>
-    <h1 class="text-xl font-bold text-white">Scanner QR NISN</h1>
-    <p class="text-xs text-slate-400 mt-0.5">Komite Sekolah - Pemindai Cepat</p>
+    <h1 class="text-xl font-bold">Scanner QR NISN</h1>
+    <p class="text-xs text-slate-400 mt-1">Komite Sekolah - Pemindai Cepat</p>
   </header>
 
-  <!-- Main Scanner Area -->
   <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center my-4 space-y-4">
-    
-    <!-- Reader Box -->
-    <div class="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-3 shadow-2xl relative overflow-hidden">
+
+    <div class="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-3 shadow-xl">
       <div id="reader" class="w-full overflow-hidden rounded-xl bg-slate-950"></div>
     </div>
 
-    <!-- Alert / Status Result Box -->
-    <div id="resultBox" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 hidden transition-all duration-300">
-      <div class="flex items-center justify-between">
-        <div>
-          <span class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">Hasil Scan NISN:</span>
-          <span id="txtNisnResult" class="text-xl font-bold text-white tracking-wide"></span>
-        </div>
-        <button onclick="copyToClipboard()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center transition shadow">
-          <i class="fa-solid fa-copy mr-1.5"></i> Salin NISN
+    <div id="statusBox" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-center">
+      Tekan tombol Aktifkan Kamera untuk memulai pemindaian.
+    </div>
+
+    <div class="flex gap-2 w-full">
+      <button id="btnStart" onclick="startScanner()"
+        class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold">
+        <i class="fa-solid fa-camera mr-2"></i>Aktifkan Kamera
+      </button>
+
+      <button id="btnStop" onclick="stopScanner()"
+        class="flex-1 bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-semibold hidden">
+        <i class="fa-solid fa-stop mr-2"></i>Matikan Kamera
+      </button>
+    </div>
+
+    <div id="resultBox" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 hidden">
+      <span class="text-xs font-semibold text-emerald-400 uppercase">Hasil Scan NISN:</span>
+      <div class="flex items-center justify-between gap-2 mt-2">
+        <span id="txtNisnResult" class="text-xl font-bold break-all"></span>
+        <button onclick="copyToClipboard()"
+          class="bg-blue-600 text-white px-3 py-2 rounded-lg text-xs whitespace-nowrap">
+          <i class="fa-solid fa-copy mr-1"></i>Salin
         </button>
       </div>
-      <p id="txtCopyStatus" class="text-[11px] text-emerald-400 mt-2 hidden"><i class="fa-solid fa-circle-check mr-1"></i> NISN Berhasil Disalin ke Clipboard!</p>
+      <p id="txtCopyStatus" class="text-xs text-emerald-400 mt-2 hidden">
+        NISN berhasil disalin!
+      </p>
     </div>
 
   </main>
 
-  <!-- Footer Info -->
   <footer class="w-full max-w-md text-center py-3 border-t border-slate-800 text-xs text-slate-500">
     Arahkan kamera ke QR Code Kartu Pelajar Siswa
   </footer>
 
-  <!-- Javascript Logic -->
-  <script>
-    let lastScannedNisn = "";
+<script>
+  let scanner = null;
+  let isRunning = false;
+  let lastScannedNisn = "";
 
-    function onScanSuccess(decodedText) {
-      if (lastScannedNisn === decodedText) return;
-      lastScannedNisn = decodedText;
+  const statusBox = document.getElementById("statusBox");
+  const btnStart = document.getElementById("btnStart");
+  const btnStop = document.getElementById("btnStop");
 
-      document.getElementById('txtNisnResult').innerText = decodedText;
-      document.getElementById('resultBox').classList.remove('hidden');
+  function setStatus(message, color = "text-slate-200") {
+    statusBox.className =
+      "w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-center " + color;
+    statusBox.textContent = message;
+  }
 
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(decodedText).then(() => {
-          showCopyStatus();
-        }).catch(err => {
-          console.log("Auto-copy tidak diizinkan, gunakan tombol manual.", err);
-        });
+  async function startScanner() {
+    if (isRunning) return;
+
+    if (!window.isSecureContext) {
+      setStatus("Halaman tidak berada dalam koneksi aman HTTPS.", "text-red-400");
+      return;
+    }
+
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setStatus("Browser tidak mendukung akses kamera. Periksa browser dan izin perangkat.", "text-red-400");
+      return;
+    }
+
+    if (typeof Html5Qrcode === "undefined") {
+      setStatus("Library HTML5-QRCode gagal dimuat. Periksa koneksi internet.", "text-red-400");
+      return;
+    }
+
+    btnStart.disabled = true;
+    btnStart.textContent = "Mengaktifkan kamera...";
+    setStatus("Meminta izin akses kamera...", "text-yellow-300");
+
+    try {
+      scanner = new Html5Qrcode("reader");
+
+      const cameras = await Html5Qrcode.getCameras();
+
+      if (!cameras || cameras.length === 0) {
+        throw new Error("Tidak ditemukan kamera pada perangkat.");
       }
-    }
 
-    function onScanFailure(error) {
-      // Abaikan error frame pembacaan biasa
-    }
+      const backCamera =
+        cameras.find(camera =>
+          /back|rear|environment|belakang/i.test(camera.label)
+        ) || cameras[cameras.length - 1];
 
-    function copyToClipboard() {
-      const nisnText = document.getElementById('txtNisnResult').innerText;
-      if (!nisnText) return;
-
-      navigator.clipboard.writeText(nisnText).then(() => {
-        showCopyStatus();
-      }).catch(() => {
-        alert("Gagal menyalin NISN, silakan salin secara manual.");
-      });
-    }
-
-    function showCopyStatus() {
-      const statusEl = document.getElementById('txtCopyStatus');
-      statusEl.classList.remove('hidden');
-      setTimeout(() => {
-        statusEl.classList.add('hidden');
-      }, 3000);
-    }
-
-    window.addEventListener('DOMContentLoaded', () => {
-      const html5QrcodeScanner = new Html5QrcodeScanner(
-        "reader", 
-        { 
-          fps: 10, 
+      await scanner.start(
+        backCamera.id,
+        {
+          fps: 10,
           qrbox: { width: 220, height: 220 },
           aspectRatio: 1.0
-        }, 
-        false
+        },
+        onScanSuccess,
+        () => {}
       );
-      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    });
-  </script>
+
+      isRunning = true;
+      btnStart.classList.add("hidden");
+      btnStop.classList.remove("hidden");
+
+      setStatus("Kamera aktif. Arahkan ke QR Code siswa.", "text-emerald-400");
+
+    } catch (error) {
+      console.error("Kesalahan kamera:", error);
+
+      let message = error.message || String(error);
+
+      if (error.name === "NotAllowedError") {
+        message = "Izin kamera ditolak. Aktifkan izin kamera pada pengaturan Chrome.";
+      } else if (error.name === "NotFoundError") {
+        message = "Kamera tidak ditemukan.";
+      } else if (error.name === "NotReadableError") {
+        message = "Kamera sedang digunakan aplikasi lain.";
+      } else if (error.name === "OverconstrainedError") {
+        message = "Kamera yang diminta tidak tersedia.";
+      }
+
+      setStatus("Gagal mengaktifkan kamera: " + message, "text-red-400");
+
+      if (scanner) {
+        try {
+          await scanner.clear();
+        } catch (e) {}
+        scanner = null;
+      }
+
+      isRunning = false;
+      btnStart.classList.remove("hidden");
+      btnStop.classList.add("hidden");
+    }
+
+    btnStart.disabled = false;
+    btnStart.innerHTML = '<i class="fa-solid fa-camera mr-2"></i>Aktifkan Kamera';
+  }
+
+  async function stopScanner() {
+    if (!scanner || !isRunning) return;
+
+    try {
+      await scanner.stop();
+      await scanner.clear();
+
+      scanner = null;
+      isRunning = false;
+
+      btnStart.classList.remove("hidden");
+      btnStop.classList.add("hidden");
+
+      setStatus("Kamera berhasil dimatikan.", "text-slate-200");
+
+    } catch (error) {
+      setStatus("Gagal menghentikan kamera: " + error.message, "text-red-400");
+    }
+  }
+
+  function onScanSuccess(decodedText) {
+    if (lastScannedNisn === decodedText) return;
+
+    lastScannedNisn = decodedText;
+
+    document.getElementById("txtNisnResult").textContent = decodedText;
+    document.getElementById("resultBox").classList.remove("hidden");
+
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(decodedText)
+        .then(() => showCopyStatus())
+        .catch(error => console.log("Auto-copy gagal:", error));
+    }
+
+    setStatus("QR Code berhasil dibaca.", "text-emerald-400");
+  }
+
+  function copyToClipboard() {
+    const nisn = document.getElementById("txtNisnResult").textContent;
+    if (!nisn) return;
+
+    if (!navigator.clipboard) {
+      alert("Clipboard tidak tersedia. Salin NISN secara manual.");
+      return;
+    }
+
+    navigator.clipboard.writeText(nisn)
+      .then(showCopyStatus)
+      .catch(() => alert("Gagal menyalin NISN."));
+  }
+
+  function showCopyStatus() {
+    const status = document.getElementById("txtCopyStatus");
+    status.classList.remove("hidden");
+    setTimeout(() => status.classList.add("hidden"), 3000);
+  }
+</script>
+
 </body>
 </html>
