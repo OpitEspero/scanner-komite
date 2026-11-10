@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Scanner NISN - Komite Sekolah</title>
+  <!-- Tailwind CSS CDN untuk Tampilan Modern -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- HTML5-QRCode Scanner Library -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 antialiased">
+
+  <!-- Header -->
+  <header class="w-full max-w-md text-center py-4 border-b border-slate-800">
+    <div class="inline-flex items-center justify-center w-12 h-12 bg-blue-600 rounded-xl mb-2 text-white shadow-lg shadow-blue-500/30">
+      <i class="fa-solid fa-qrcode text-2xl"></i>
+    </div>
+    <h1 class="text-xl font-bold text-white">Scanner QR NISN</h1>
+    <p class="text-xs text-slate-400 mt-0.5">Komite Sekolah - Pemindai Cepat</p>
+  </header>
+
+  <!-- Main Scanner Area -->
+  <main class="w-full max-w-md flex-1 flex flex-col items-center justify-center my-4 space-y-4">
+    
+    <!-- Reader Box -->
+    <div class="w-full bg-slate-800 border-2 border-slate-700 rounded-2xl p-3 shadow-2xl relative overflow-hidden">
+      <div id="reader" class="w-full overflow-hidden rounded-xl bg-slate-950"></div>
+    </div>
+
+    <!-- Alert / Status Result Box -->
+    <div id="resultBox" class="w-full bg-slate-800 border border-slate-700 rounded-xl p-4 hidden transition-all duration-300">
+      <div class="flex items-center justify-between">
+        <div>
+          <span class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider block">Hasil Scan NISN:</span>
+          <span id="txtNisnResult" class="text-xl font-bold text-white tracking-wide"></span>
+        </div>
+        <button onclick="copyToClipboard()" class="bg-blue-600 hover:bg-blue-700 text-white px-3.5 py-2 rounded-lg text-xs font-semibold flex items-center transition shadow">
+          <i class="fa-solid fa-copy mr-1.5"></i> Salin NISN
+        </button>
+      </div>
+      <p id="txtCopyStatus" class="text-[11px] text-emerald-400 mt-2 hidden"><i class="fa-solid fa-circle-check mr-1"></i> NISN Berhasil Disalin ke Clipboard!</p>
+    </div>
+
+  </main>
+
+  <!-- Footer Info -->
+  <footer class="w-full max-w-md text-center py-3 border-t border-slate-800 text-xs text-slate-500">
+    Arahkan kamera ke QR Code Kartu Pelajar Siswa[cite: 3, 4]
+  </footer>
+
+  <!-- Javascript Logic -->
+  <script>
+    let lastScannedNisn = "";
+    let html5QrcodeScanner = null;
+
+    function onScanSuccess(decodedText, decodedResult) {
+      // Cegah proses berulang jika QR yang sama ter-scan berturut-turut
+      if (lastScannedNisn === decodedText) return;
+      
+      lastScannedNisn = decodedText;
+
+      // Tampilkan hasil di UI
+      document.getElementById('txtNisnResult').innerText = decodedText;
+      document.getElementById('resultBox').classList.remove('hidden');
+
+      // Otomatis Salin ke Clipboard jika Browser Mengizinkan
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(decodedText).then(() => {
+          showCopyStatus();
+        }).catch(err => {
+          console.log("Auto-copy gagal, gunakan tombol manual.", err);
+        });
+      }
+    }
+
+    function onScanFailure(error) {
+      // Abaikan error pemindaian per-frame biasa
+    }
+
+    function copyToClipboard() {
+      const nisnText = document.getElementById('txtNisnResult').innerText;
+      if (!nisnText) return;
+
+      navigator.clipboard.writeText(nisnText).then(() => {
+        showCopyStatus();
+      }).catch(() => {
+        alert("Gagal menyalin NISN, silakan salin secara manual.");
+      });
+    }
+
+    function showCopyStatus() {
+      const statusEl = document.getElementById('txtCopyStatus');
+      statusEl.classList.remove('hidden');
+      setTimeout(() => {
+        statusEl.classList.add('hidden');
+      }, 3000);
+    }
+
+    // Inisialisasi Scanner
