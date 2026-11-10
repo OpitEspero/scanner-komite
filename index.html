@@ -190,22 +190,45 @@
     }
   }
 
-  function onScanSuccess(decodedText) {
-    if (lastScannedNisn === decodedText) return;
+  async function onScanSuccess(decodedText) {
+  const nisn = String(decodedText || "").trim();
+  if (!nisn || lastScannedNisn === nisn) return;
 
-    lastScannedNisn = decodedText;
+  // Mencegah hasil scan berulang ketika kamera masih menangkap QR yang sama.
+  lastScannedNisn = nisn;
+  document.getElementById("txtNisnResult").textContent = nisn;
+  document.getElementById("resultBox").classList.remove("hidden");
 
-    document.getElementById("txtNisnResult").textContent = decodedText;
-    document.getElementById("resultBox").classList.remove("hidden");
+  if (window.opener && !window.opener.closed) {
+    setStatus("QR berhasil dibaca. Mengirim NISN ke aplikasi keuangan...", "text-emerald-400");
+    try {
+      // Parent memeriksa origin dan sumber jendela sebelum menerima NISN.
+      window.opener.postMessage({
+        type: "KOMITE_QR_SCAN",
+        nisn: nisn
+      }, "*");
 
-    if (navigator.clipboard && window.isSecureContext) {
-      navigator.clipboard.writeText(decodedText)
-        .then(() => showCopyStatus())
-        .catch(error => console.log("Auto-copy gagal:", error));
+      // Lepaskan kamera sebelum popup ditutup.
+      await stopScanner();
+      setStatus("Scan berhasil. Halaman scanner akan ditutup...", "text-emerald-400");
+      setTimeout(function () {
+        window.close();
+      }, 350);
+    } catch (error) {
+      console.error("Gagal mengirim hasil scan:", error);
+      setStatus("Gagal mengirim NISN ke aplikasi induk: " + (error.message || error), "text-red-400");
     }
-
-    setStatus("QR Code berhasil dibaca.", "text-emerald-400");
+  } else {
+    // Jika URL scanner dibuka sendiri, tampilkan hasil dan sediakan salin manual.
+    setStatus("QR Code berhasil dibaca. Scanner dibuka tanpa aplikasi induk.", "text-emerald-400");
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(nisn)
+        .then(() => showCopyStatus())
+        .catch(error => console.log("Salin otomatis gagal:", error));
+    }
   }
+}
+
 
   function copyToClipboard() {
     const nisn = document.getElementById("txtNisnResult").textContent;
